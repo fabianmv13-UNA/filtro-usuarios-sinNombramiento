@@ -216,7 +216,7 @@ def generar_pdf_institucional(usuarios_validos, fecha_corte_str):
         story.append(Spacer(1, 4))
         # -- story.append(Paragraph("CORREO ELECTRÓNICO", style_etiqueta))
         # -- story.append(Paragraph(u["correo"], style_texto))
-        # -- story.append(Spacer(1, 8))
+        story.append(Spacer(1, 8))
         story.append(Table([[""]], colWidths=[510], rowHeights=[1], style=[('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor("#CC0000"))]))
         story.append(Spacer(1, 10))
         
