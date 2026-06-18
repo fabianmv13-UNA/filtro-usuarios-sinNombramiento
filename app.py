@@ -35,12 +35,8 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
         # 1. Extraer Cédula (Mejorado para ignorar "ANULAR" y capturar solo el ID real)
         cedula = "Desconocido"
         for l in lineas:
-            # Eliminar espacios y guiones para validar el formato de cédula
-            limpia = l.replace("-","").replace(" ","")
-            # Si contiene palabras de control del reporte, saltar renglón
             if any(k in l.upper() for k in ["NOMBRE", "CORREO", "GRUPO", "ROLES", "ANULAR"]):
                 continue
-            # Capturar el primer elemento alfanumérico largo que califique como identificación
             partes = l.split()
             if partes:
                 candidato = partes[0].replace("-","")
@@ -52,10 +48,9 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
         nombre = "Desconocido"
         for i, l in enumerate(lineas):
             if "NOMBRE" in l.upper() and i + 1 < len(lineas):
-                # Limpiar posibles números de cédula repetidos al inicio del renglón de nombre
                 texto_nombre = lineas[i + 1]
                 texto_nombre = re.sub(r'^\b\d+\b\s*', '', texto_nombre)
-                texto_nombre = re.sub(r'^\b[A-Z]\d+\b\s*', '', texto_nombre) # Por si inicia con letra (extranjeros)
+                texto_nombre = re.sub(r'^\b[A-Z]\d+\b\s*', '', texto_nombre) 
                 nombre = texto_nombre.strip()
                 break
                 
@@ -81,7 +76,6 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
                 f_hasta = fechas_linea[-2]
                 f_mod_str = fechas_linea[-1]
                 
-                # Extraer texto antes de las fechas
                 texto_previo_fechas = l
                 for f in fechas_linea:
                     texto_previo_fechas = texto_previo_fechas.replace(f, "")
@@ -90,30 +84,24 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
                 if texto_previo_fechas:
                     nombre_rol_acumulado.append(texto_previo_fechas)
                 
-                # Unificar texto crudo del rol detectado
                 rol_sucio = " ".join(nombre_rol_acumulado).strip()
                 rol_sucio = re.sub(r'\s+', '_', rol_sucio).upper()
                 
-                # --- LÓGICA DE LIMPIEZA AGRESIVA: Aislar Rol Técnico de los Datos Personales ---
+                # --- LÓGICA DE LIMPIEZA AGRESIVA ---
                 rol_limpio = rol_sucio
-                
-                # Remover número de cédula si viene pegado al rol técnico
                 rol_limpio = re.sub(r'^\b\d+\b_', '', rol_limpio)
                 rol_limpio = re.sub(r'^\b[A-Z0-9]+\b_', '', rol_limpio)
                 rol_limpio = rol_limpio.replace(cedula.upper() + "_", "")
                 
-                # Desmenuzar y remover de forma estricta los apellidos y nombres del funcionario dentro del rol
                 if nombre != "Desconocido":
                     partes_nombre = [p.upper() for p in nombre.split() if len(p) > 2]
                     for parte in partes_nombre:
                         rol_limpio = rol_limpio.replace(parte + "_", "")
                         rol_limpio = rol_limpio.replace("_" + parte, "")
                 
-                # Limpiar guiones bajos huérfanos
                 rol_limpio = rol_limpio.strip("_")
                 
-                # Reconstrucción de seguridad por si la limpieza borró de más el rol principal
-                if not rol_limpio or rol_limpio.isnumeric() or len(rol_limpio) < 4:
+                if not rol_limpio or len(rol_limpio) < 4:
                     if "FUNCIONARIO" in rol_sucio:
                         rol_limpio = "UNA_ERP_FUNCIONARIO"
                     else:
@@ -143,10 +131,11 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
         # Regla 1: Debe contener el rol FUNCIONARIO
         tiene_funcionario = "FUNCIONARIO" in texto_bloque_total
         
-        # Regla 2: Exclusiones obligatorias de estudiantes o deducciones de planilla
+        # Regla 2: Exclusiones (Se añade la validación para FUNDAUNA)
         tiene_estudiante_asoc = "ESTUDIANTE_ASOCIACION" in texto_bloque_total or "ESTUDIANTE ASOCIACION" in texto_bloque_total
         tiene_deduccion = "OCP_DEDUCCION" in texto_bloque_total or "OCP DEDUCCION" in texto_bloque_total or "DEDUCCION" in texto_bloque_total
-        tiene_fundauna = "CON_FUNDAUNA" in texto_bloque_total
+        tiene_fundauna = "FUNDAUNA" in texto_bloque_total
+        
         omitir_por_rol = tiene_estudiante_asoc or tiene_deduccion or tiene_fundauna
 
         # Regla 3: Mantener SÓLO si la fecha de modificación es MÁS ANTIGUA o IGUAL (<=) a la de corte
@@ -168,7 +157,6 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
 
         # --- GUARDAR USUARIOS DEPURADOS ---
         if tiene_funcionario and not omitir_por_rol and cumple_filtro_fecha:
-            # Condición de control usando la cédula extraída de forma segura
             if not any(u['cedula'] == cedula for u in usuarios_validos) and cedula != "Desconocido":
                 
                 if not roles_completos_usuario:
@@ -197,9 +185,9 @@ def generar_pdf_institucional(usuarios_validos, fecha_corte_str):
     style_tc = ParagraphStyle('TC', fontName="Helvetica", fontSize=8, leading=10)
 
     story.append(Paragraph("UNIVERSIDAD NACIONAL", style_titulo))
-    story.append(Paragraph("PRODUCCION Y SEGURIDAD", style_sub))
-    story.append(Paragraph("USUARIOS ACTIVOS SIN NOMBRAMIENTO", style_titulo))
-    story.append(Paragraph(f"Usuarios modificados antes del {fecha_corte_str}", style_sub))
+    story.append(Paragraph("PROGRAMA DE DESARROLLO DE RECURSOS HUMANOS", style_sub))
+    story.append(Paragraph("REPORTE DE USUARIOS ACTIVOS SIN NOMBRAMIENTO ACTIVO (DEPURADO)", style_titulo))
+    story.append(Paragraph(f"Filtro: Con UNA_ERP_FUNCIONARIO modificado antes o el {fecha_corte_str} (Modificaciones Antiguas - Excluyendo FUNDAUNA)", style_sub))
     story.append(Spacer(1, 15))
     
     for u in usuarios_validos:
@@ -239,26 +227,26 @@ st.markdown(
     """
     <div style="background-color:#CC0000;padding:15px;border-radius:10px;margin-bottom:25px;">
     <h1 style="color:white;text-align:center;margin:0;font-family:sans-serif;">Universidad Nacional de Costa Rica</h1>
-    <p style="color:white;text-align:center;margin:5px 0 0 0;font-size:18px;">Produccción y Seguridad CGI</p>
+    <p style="color:white;text-align:center;margin:5px 0 0 0;font-size:18px;">Programa de Desarrollo de Recursos Humanos</p>
     </div>
     """, unsafe_allow_html=True
 )
 
-st.title("Usuarios sin nombramiento activo")
+st.title("📊 Extractor Histórico Avanzado - SIGESA")
 
-st.markdown("Fecha de antiguedad")
+st.markdown("### ⚙️ Ajuste de Fecha Límite")
 fecha_seleccionada = st.date_input(
-    "Mostrar Usuarios modificados antes de:", 
-    value=datetime(2025, 12, 17)
+    "📅 Mostrar modificaciones antiguas menores o iguales a (<=):", 
+    value=datetime(2025, 12, 31)
 )
 
 st.markdown("---")
-archivo_cargado = st.file_uploader("Cargue aquí el archivo PDF de SIGESA", type=["pdf"])
+archivo_cargado = st.file_uploader("📂 Arrastra aquí el reporte PDF de SIGESA", type=["pdf"])
 
 if archivo_cargado is not None:
     bytes_data = archivo_cargado.read()
     
-    with st.spinner("Decodificando bloques y omitiendo ruidos del sistema (ANULAR)..."):
+    with st.spinner("Filtrando roles e ignorando asignaciones de FUNDAUNA..."):
         total, usuarios_filtrados = analizar_y_filtrar_sigesa(bytes_data, fecha_seleccionada)
         
     col1, col2 = st.columns(2)
@@ -274,10 +262,10 @@ if archivo_cargado is not None:
         pdf_final_bytes = generar_pdf_institucional(usuarios_filtrados, fecha_seleccionada.strftime("%d/%m/%Y"))
         
         st.download_button(
-            label="Descargar (PDF)",
+            label="🔴 Descargar Reporte Depurado (PDF)",
             data=pdf_final_bytes,
-            file_name=f"SIGESA_Auditoria_Historica_{fecha_seleccionada.strftime('%Y%m%d')}.pdf",
+            file_name=f"SIGESA_Historico_Depurado_{fecha_seleccionada.strftime('%Y%m%d')}.pdf",
             mime="application/pdf"
         )
     else:
-        st.warning("Ningún usuario cumple con tener modificaciones iguales o anteriores a la fecha seleccionada.")
+        st.warning("⚠️ Ningún usuario cumple con tener modificaciones iguales o anteriores a la fecha seleccionada.")
