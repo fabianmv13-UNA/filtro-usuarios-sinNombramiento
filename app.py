@@ -8,6 +8,8 @@ from datetime import datetime
 import io
 import re
 import pandas as pd
+import base64
+import os
 
 # Configuración de la página web (Estilo UNA)
 st.set_page_config(page_title="Filtro SIGESA - UNA", page_icon="📄", layout="wide")
@@ -26,7 +28,7 @@ def analizar_y_filtrar_sigesa(file_bytes, fecha_limite_dt):
     total_usuarios_pdf = 0
     
     for bloque in bloques_crudos:
-        if not bloque.strip() or "REPORTE DE USUARIOS ACTIVOS" in bloque:
+        if not bloque.strip() or "REPORTE DE USUARIOS ACTIVOS SIN NOMBRAMIENTO" in bloque:
             continue
             
         total_usuarios_pdf += 1
@@ -185,9 +187,9 @@ def generar_pdf_institucional(usuarios_validos, fecha_corte_str):
     style_tc = ParagraphStyle('TC', fontName="Helvetica", fontSize=8, leading=10)
 
     story.append(Paragraph("UNIVERSIDAD NACIONAL", style_titulo))
-    story.append(Paragraph("PROGRAMA DE DESARROLLO DE RECURSOS HUMANOS", style_sub))
-    story.append(Paragraph("REPORTE DE USUARIOS ACTIVOS SIN NOMBRAMIENTO ACTIVO (DEPURADO)", style_titulo))
-    story.append(Paragraph(f"Filtro: Con UNA_ERP_FUNCIONARIO modificado antes o el {fecha_corte_str} (Modificaciones Antiguas - Excluyendo FUNDAUNA)", style_sub))
+    story.append(Paragraph("PRPDUCCCIÓN Y SEGURIDAD", style_sub))
+    story.append(Paragraph("USUARIOS ACTIVOS SIN NOMBRAMIENTO", style_titulo))
+    story.append(Paragraph(f"Usuarios modificados antes del {fecha_corte_str}", style_sub))
     story.append(Spacer(1, 15))
     
     for u in usuarios_validos:
@@ -222,26 +224,42 @@ def generar_pdf_institucional(usuarios_validos, fecha_corte_str):
     pdf_buffer.seek(0)
     return pdf_buffer.getvalue()
 
-# --- INTERFAZ WEB (STREAMLIT) ---
+# --- INTERFAZ WEB ---
+# --- LOGO LOCAL ---
+logo_path = "logo_una_2.png"
+logo_html = ""
+
+if os.path.exists(logo_path):
+    with open(logo_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+    logo_html = f'<img src="data:image/png;base64,{encoded_string}" width="120" style="margin-right:25px;">'
+
+
+# Banner Superior con Logo y Título
 st.markdown(
-    """
-    <div style="background-color:#CC0000;padding:15px;border-radius:10px;margin-bottom:25px;">
-    <h1 style="color:white;text-align:center;margin:0;font-family:sans-serif;">Universidad Nacional de Costa Rica</h1>
-    <p style="color:white;text-align:center;margin:5px 0 0 0;font-size:18px;">Programa de Desarrollo de Recursos Humanos</p>
+    f"""
+    <div style="background-color:white; padding:15px; border-radius:10px; border-left: 8px solid #CC0000; display:flex; align-items:center; margin-bottom:25px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
+        {logo_html}
+        <div>
+            <h1 style="color:#CC0000; margin:0; font-family:sans-serif; font-size:28px;">Universidad Nacional de Costa Rica</h1>
+            <p style="color:#333; margin:0; font-size:18px; font-weight:bold;">Producción y Seguridad CGI</p>
+            <p style="color:#666; margin:0; font-size:14px;">Usuarios SIGESA</p>
+        </div>
     </div>
     """, unsafe_allow_html=True
 )
 
-st.title("📊 Extractor Histórico Avanzado - SIGESA")
+# Título de la aplicación
+st.title("Usuarios activos sin nombramiento - SIGESA")
 
-st.markdown("### ⚙️ Ajuste de Fecha Límite")
+st.markdown("Ajuste de Fecha Límite")
 fecha_seleccionada = st.date_input(
-    "📅 Mostrar modificaciones antiguas menores o iguales a (<=):", 
+    "Mostrar usuarios modificados antes del:", 
     value=datetime(2025, 12, 31)
 )
 
 st.markdown("---")
-archivo_cargado = st.file_uploader("📂 Arrastra aquí el reporte PDF de SIGESA", type=["pdf"])
+archivo_cargado = st.file_uploader("📂 Cargue aquí el reporte PDF de SIGESA", type=["pdf"])
 
 if archivo_cargado is not None:
     bytes_data = archivo_cargado.read()
@@ -262,10 +280,10 @@ if archivo_cargado is not None:
         pdf_final_bytes = generar_pdf_institucional(usuarios_filtrados, fecha_seleccionada.strftime("%d/%m/%Y"))
         
         st.download_button(
-            label="🔴 Descargar Reporte Depurado (PDF)",
+            label="Descargar archivo (PDF)",
             data=pdf_final_bytes,
-            file_name=f"SIGESA_Historico_Depurado_{fecha_seleccionada.strftime('%Y%m%d')}.pdf",
+            file_name=f"ReporteDepurado{fecha_seleccionada.strftime('%Y%m%d')}.pdf",
             mime="application/pdf"
         )
     else:
-        st.warning("⚠️ Ningún usuario cumple con tener modificaciones iguales o anteriores a la fecha seleccionada.")
+        st.warning("Ningún usuario cumple con tener modificaciones iguales o anteriores a la fecha seleccionada.")
