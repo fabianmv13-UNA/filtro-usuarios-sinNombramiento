@@ -225,8 +225,9 @@ def generar_pdf_institucional(usuarios_validos, fecha_corte_str):
     return pdf_buffer.getvalue()
 
 # --- INTERFAZ WEB ---
+
 # --- LOGO LOCAL ---
-logo_path = "logo_una_2.png"
+logo_path = "logo_una.png"
 logo_html = ""
 
 if os.path.exists(logo_path):
@@ -236,18 +237,18 @@ if os.path.exists(logo_path):
 
 
 # Banner Superior con Logo y Título
-st.markdown(
-    f"""
-    <div style="background-color:white; padding:15px; border-radius:10px; border-left: 8px solid #CC0000; display:flex; align-items:center; margin-bottom:25px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
-        {logo_html}
-        <div>
-            <h1 style="color:#CC0000; margin:0; font-family:sans-serif; font-size:28px;">Universidad Nacional de Costa Rica</h1>
-            <p style="color:#333; margin:0; font-size:18px; font-weight:bold;">Producción y Seguridad CGI</p>
-            <p style="color:#666; margin:0; font-size:14px;">Usuarios SIGESA</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True
-)
+banner_html = f"""
+<div style="background-color:white; padding:20px; border-radius:10px; border-left: 8px solid #CC0000; display:flex; align-items:center; margin-bottom:25px; box-shadow: 2px 2px 10px rgba(0,0,0,0.15);">
+{logo_html}
+<div style="flex-grow:1;">
+<h1 style="color:#CC0000; margin:0; font-family:sans-serif; font-size:26px; font-weight:bold; line-height:1.2;">Universidad Nacional de Costa Rica</h1>
+<p style="color:#333; margin:5px 0 0 0; font-family:sans-serif; font-size:18px; font-weight:bold;">Producción y Seguridad CGI</p>
+<p style="color:#666; margin:2px 0 0 0; font-family:sans-serif; font-size:14px;">Usuarios SIGESA</p>
+</div>
+</div>
+"""
+
+st.markdown(banner_html, unsafe_allow_html=True)
 
 # Título de la aplicación
 st.title("Usuarios activos sin nombramiento - SIGESA")
