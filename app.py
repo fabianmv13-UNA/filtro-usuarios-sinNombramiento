@@ -187,7 +187,7 @@ def generar_pdf_institucional(usuarios_validos, fecha_corte_str):
     style_tc = ParagraphStyle('TC', fontName="Helvetica", fontSize=8, leading=10)
 
     story.append(Paragraph("UNIVERSIDAD NACIONAL", style_titulo))
-    story.append(Paragraph("PRPDUCCCIÓN Y SEGURIDAD", style_sub))
+    story.append(Paragraph("PRODUCCIÓN Y SEGURIDAD", style_sub))
     story.append(Paragraph("USUARIOS ACTIVOS SIN NOMBRAMIENTO", style_titulo))
     story.append(Paragraph(f"Usuarios modificados antes del {fecha_corte_str}", style_sub))
     story.append(Spacer(1, 15))
